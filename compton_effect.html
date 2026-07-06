@@ -1,0 +1,170 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Квантовая физика — Эффект Комптона</title>
+    <style>
+        body {
+            background-color: #090d16;
+            color: #f1f5f9;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 { color: #f43f5e; margin-bottom: 5px; font-size: 22px; }
+        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .layout { display: flex; gap: 25px; background: #111827; padding: 20px; border-radius: 8px; border: 1px solid #1f2937; }
+        canvas { background: #03050a; border-radius: 4px; border: 1px solid #374151; }
+        .sidebar { width: 330px; display: flex; flex-direction: column; gap: 15px; }
+        .pseudocode { background: #030712; padding: 12px; border-radius: 6px; font-size: 11px; color: #f43f5e; line-height: 1.4; border-left: 3px solid #f43f5e; }
+        .controls { display: flex; flex-direction: column; gap: 12px; font-size: 12px; }
+        .btn { background: #f43f5e; color: #000; border: none; padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #e11d48; color: #fff; }
+        .value { color: #f43f5e; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>ТОМ 4. КВАНТОВАЯ ФИЗИКА. ГЛАВА 7: ЭФФЕКТ КОМПТОНА</h1>
+    <div class="subtitle">Упругое столкновение фотона с электроном: доказательство импульса кванта света</div>
+
+    <div class="layout">
+        <canvas id="comptonCanvas" width="500" height="400"></canvas>
+
+        <div class="sidebar">
+            <div class="pseudocode">
+<b>Формула Комптона (Сдвиг волны):</b><br>
+Δλ = λ' - λ = λ_c * (1 - cos(θ))<br><br>
+<b>Закон сохранения импульса:</b><br>
+p_фотона = p'_фотона + p_электрона<br><br>
+<b>Логика соударения:</b><br>
+Фотон теряет энергию (E) -> <br>
+Длина волны λ увеличивается -> <br>
+Цвет фотона смещается в «красную» <br>
+сторону спектра (энергия падает).
+            </div>
+
+            <div class="controls">
+                <button class="btn" id="collisionBtn">ЗАПУСТИТЬ ФОТОН РЕНТГЕНА</button>
+                <div style="font-size: 11px; color: #64748b; font-style: italic; margin-top: 5px;">
+                    💡 <b>Внимание:</b> Синий квант рентгена бьет неподвижный электрон. Обратите внимание, как после удара фотон теряет энергию и «краснеет», а электрон получает импульс отдачи!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script {nonce}>
+        const canvas = document.getElementById('comptonCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let photon = null;
+        let electron = { x: 230, y: 200, vx: 0, vy: 0, active: true };
+        let traces = [];
+
+        function startSimulation() {
+            // Навешиваем дефолтные параметры
+            photon = { x: 20, y: 200, vx: 5, vy: 0, energy: 'high', collided: false, path: [] };
+            electron = { x: 230, y: 200, vx: 0, vy: 0, active: true, path: [] };
+            traces = [];
+        }
+
+        function update() {
+            // Движение фотона до столкновения
+            if (photon) {
+                photon.x += photon.vx;
+                photon.y += photon.vy;
+                photon.path.push({x: photon.x, y: photon.y});
+                if (photon.path.length > 50) photon.path.shift();
+
+                // Условие соударения с электроном
+                let dx = electron.x - photon.x;
+                let dy = electron.y - photon.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+
+                if (dist < 12 && !photon.collided) {
+                    photon.collided = true;
+                    
+                    // Расчет углов рассеяния (Бильярдная модель Комптона)
+                    let theta = (Math.random() * 40 + 20) * (Math.PI / 180); // Угол фотона вверх (30-60 градусов)
+                    if (Math.random() > 0.5) theta = -theta; // Рандомно вверх или вниз
+
+                    // Фотон теряет энергию, скорость света константна, меняется направление и цвет
+                    photon.vx = Math.cos(theta) * 5;
+                    photon.vy = Math.sin(theta) * 5;
+                    photon.energy = 'low'; // фотон «покраснел»
+
+                    // Электрон получает импульс отдачи по закону сохранения (угол фи)
+                    let phi = -Math.atan2(Math.sin(theta), 2 - Math.cos(theta)); // угол отдачи электрона
+                    let eSpeed = 3.2; // скорость отдачи электрона
+                    electron.vx = Math.cos(phi) * eSpeed;
+                    electron.vy = Math.sin(phi) * eSpeed;
+                }
+
+                // Удаление улетевшего фотона
+                if (photon.x > canvas.width || photon.y < 0 || photon.y > canvas.height) {
+                    photon = null;
+                }
+            }
+
+            // Движение электрона после удара
+            if (electron.vx !== 0 || electron.vy !== 0) {
+                electron.x += electron.vx;
+                electron.y += electron.vy;
+                electron.path.push({x: electron.x, y: electron.y});
+                if (electron.path.length > 50) electron.path.shift();
+
+                if (electron.x > canvas.width || electron.y < 0 || electron.y > canvas.height) {
+                    electron.vx = 0; electron.vy = 0;
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Траектория фотона
+            if (photon) {
+                ctx.strokeStyle = photon.energy === 'high' ? 'rgba(56, 189, 248, 0.3)' : 'rgba(239, 68, 68, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let p of photon.path) ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+
+                // Фотон (Синий рентген до удара, красный свет после удара)
+                ctx.fillStyle = photon.energy === 'high' ? '#38bdf8' : '#ef4444';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = ctx.fillStyle;
+                ctx.beginPath(); ctx.arc(photon.x, photon.y, 5, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            // Траектория электрона
+            if (electron.path && electron.path.length > 0) {
+                ctx.strokeStyle = 'rgba(16, 185, 129, 0.3)';
+                ctx.beginPath();
+                for (let e of electron.path) ctx.lineTo(e.x, e.y);
+                ctx.stroke();
+            }
+
+            // Свободный электрон (Зеленый шарик)
+            ctx.fillStyle = '#10b981';
+            ctx.beginPath(); ctx.arc(electron.x, electron.y, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '10px Courier New';
+            ctx.fillText("ЭЛЕКТРОН (e⁻)", electron.x - 35, electron.y - 15);
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        document.getElementById('collisionBtn').addEventListener('click', startSimulation);
+        loop();
+    </script>
+</body>
+</html>

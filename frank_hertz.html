@@ -1,0 +1,195 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Опыт Франка-Герца — Квантование энергии</title>
+    <style>
+        body {
+            background-color: #090d16;
+            color: #f1f5f9;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 { color: #ec4899; margin-bottom: 5px; font-size: 22px; }
+        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .layout { display: flex; gap: 25px; background: #111827; padding: 20px; border-radius: 8px; border: 1px solid #1f2937; }
+        canvas { background: #04060d; border-radius: 4px; border: 1px solid #374151; }
+        .sidebar { width: 330px; display: flex; flex-direction: column; gap: 15px; }
+        .pseudocode { background: #030712; padding: 12px; border-radius: 6px; font-size: 11px; color: #a855f7; line-height: 1.4; border-left: 3px solid #a855f7; }
+        .controls { display: flex; flex-direction: column; gap: 12px; font-size: 12px; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        .btn { background: #ec4899; color: #000; border: none; padding: 8px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #be185d; color: #fff; }
+        .value { color: #ec4899; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>КВАНТОВАЯ ФИЗИКА. ГЛАВА 3: ОПЫТ ФРАНКА-ГЕРЦА</h1>
+    <div class="subtitle">Доказательство Боровских орбит: дискретное поглощение энергии атомом (4.9 eV)</div>
+
+    <div class="layout">
+        <canvas id="atomCanvas" width="500" height="400"></canvas>
+
+        <div class="sidebar">
+            <div class="pseudocode">
+<b>Логика дискретных скачков:</b><br>
+ДИСТАНЦИЯ = РАССТОЯНИЕ(Электрон, Атом)<br>
+ЕСЛИ ДИСТАНЦИЯ < Порог Столкновения ТО:<br>
+&nbsp;&nbsp;ЕСЛИ Электрон.E >= 4.9 eV ТО:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;// Неупругий удар<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Электрон.E -= 4.9 eV<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Атом.Состояние = ВОЗБУЖДЕН<br>
+&nbsp;&nbsp;ИНАЧЕ:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;// Упругий удар (отскок)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Электрон.vx = -Электрон.vx<br>
+КОНЕЦ ЕСЛИ
+            </div>
+
+            <div class="controls">
+                <label>Энергия разгоняющего поля (E электрона):</label>
+                <input type="range" id="energySlider" min="1.0" max="8.0" step="0.1" value="3.5">
+                <div>Энергия электрона: <span id="energyValue" class="value">3.5 eV</span></div>
+                <br>
+                <button class="btn" id="shootBtn">ВЫСТРЕЛИТЬ ЭЛЕКТРОНОМ</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('atomCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const atom = { x: 250, y: 200, energyLevel: 1, timer: 0 };
+        let electrons = [];
+        let photons = [];
+
+        function shootElectron() {
+            const startEnergy = parseFloat(document.getElementById('energySlider').value);
+            // Скорость пропорциональна корню из энергии
+            const speed = Math.sqrt(startEnergy) * 2.5; 
+            electrons.push({
+                x: 20,
+                y: 200 + (Math.random() * 10 - 5), // небольшая погрешность по высоте
+                vx: speed,
+                energy: startEnergy,
+                collided: false
+            });
+        }
+
+        function update() {
+            const currentEnergy = parseFloat(document.getElementById('energySlider').value);
+            document.getElementById('energyValue').textContent = currentEnergy.toFixed(1) + " eV";
+
+            // Механика электронов
+            for (let i = electrons.length - 1; i >= 0; i--) {
+                let e = electrons[i];
+                e.x += e.vx;
+
+                // Расстояние до атома
+                let dx = atom.x - e.x;
+                let dy = atom.y - e.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+
+                if (dist < 25 && !e.collided) {
+                    e.collided = true;
+                    if (e.energy >= 4.9) {
+                        // Неупругое столкновение
+                        e.energy -= 4.9;
+                        e.vx = Math.sqrt(e.energy) * 2.5; // замедляется
+                        if (e.vx < 0.5) e.vx = 0.5; // минимальное движение вперед
+                        atom.energyLevel = 2;
+                        atom.timer = 40; // время жизни в возбужденном состоянии
+                    } else {
+                        // Упругое столкновение (отскок назад)
+                        e.vx = -e.vx;
+                    }
+                }
+
+                // Удаление улетевших
+                if (e.x > canvas.width || e.x < 0) electrons.splice(i, 1);
+            }
+
+            // Механика девозбуждения атома
+            if (atom.energyLevel === 2) {
+                atom.timer--;
+                if (atom.timer <= 0) {
+                    atom.energyLevel = 1;
+                    // Испускание кванта света (фотона)
+                    let angle = Math.random() * Math.PI * 2;
+                    photons.push({
+                        x: atom.x,
+                        y: atom.y,
+                        vx: Math.cos(angle) * 4,
+                        vy: Math.sin(angle) * 4
+                    });
+                }
+            }
+
+            // Движение фотонов
+            for (let i = photons.length - 1; i >= 0; i--) {
+                let p = photons[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
+                    photons.splice(i, 1);
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Отрисовка орбиты Бора (визуальная схема атома)
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.arc(atom.x, atom.y, 40, 0, Math.PI * 2); ctx.stroke();
+            if (atom.energyLevel === 2) {
+                ctx.strokeStyle = '#f43f5e'; // внешняя орбита активируется
+                ctx.beginPath(); ctx.arc(atom.x, atom.y, 60, 0, Math.PI * 2); ctx.stroke();
+            }
+
+            // Ядро атома ртути
+            ctx.fillStyle = atom.energyLevel === 2 ? '#ef4444' : '#3b82f6';
+            if (atom.energyLevel === 2) {
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#ef4444';
+            }
+            ctx.beginPath(); ctx.arc(atom.x, atom.y, 14, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '11px Courier New';
+            ctx.fillText("АТОМ РТУТИ", atom.x - 30, atom.y - 20);
+
+            // Отрисовка летящих электронов (розовые минусы)
+            ctx.fillStyle = '#ec4899';
+            for (let e of electrons) {
+                ctx.beginPath(); ctx.arc(e.x, e.y, 4, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // Отрисовка испущенных фотонов (фиолетовые вспышки)
+            ctx.fillStyle = '#a855f7';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#a855f7';
+            for (let p of photons) {
+                ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        document.getElementById('shootBtn').addEventListener('click', shootElectron);
+        loop();
+    </script>
+</body>
+</html>

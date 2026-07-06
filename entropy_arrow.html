@@ -1,0 +1,221 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Термодинамика — Стрела времени Больцмана</title>
+    <style>
+        body {
+            background-color: #090d16;
+            color: #f1f5f9;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 { color: #f59e0b; margin-bottom: 5px; font-size: 22px; }
+        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .layout { display: flex; gap: 25px; background: #111827; padding: 20px; border-radius: 8px; border: 1px solid #1f2937; }
+        canvas { background: #03050a; border-radius: 4px; border: 1px solid #374151; }
+        .sidebar { width: 330px; display: flex; flex-direction: column; gap: 15px; }
+        .pseudocode { background: #030712; padding: 12px; border-radius: 6px; font-size: 11px; color: #f59e0b; line-height: 1.4; border-left: 3px solid #f59e0b; }
+        .controls { display: flex; flex-direction: column; gap: 12px; font-size: 12px; }
+        .btn { background: #f59e0b; color: #000; border: none; padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #d97706; }
+        .btn.active { background: #ef4444; color: #fff; }
+        .value { color: #f59e0b; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>ТОМ 2. ТЕРМОДИНАМИКА. ГЛАВА 4: ЭНТРОПИЯ И СТРЕЛА ВРЕМЕНИ</h1>
+    <div class="subtitle">Формула Больцмана: необратимое перемешивание и рост хаоса в замкнутой системе</div>
+
+    <div class="layout">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <canvas id="entropyCanvas" width="400" height="230"></canvas>
+            <canvas id="eChartCanvas" width="400" height="150"></canvas>
+        </div>
+
+        <div class="sidebar">
+            <div class="pseudocode">
+<b>Формула энтропии Больцмана:</b><br>
+S = k * ln(W)<br><br>
+<b>Критерий Стрелы Времени:</b><br>
+Изначально газы разделены (Порядок).<br>
+S_начальная = 0.<br><br>
+Убираем перегородку -> хаос растет.<br>
+Вероятность самопроизвольного <br>
+обратного разделения смеси молекул <br>
+<b>стремится к абсолютному нулю!</b>
+            </div>
+
+            <div class="controls">
+                <button class="btn" id="partitionBtn">УБРАТЬ ЦЕНТРАЛЬНУЮ ПЕРЕГОРОДКУ</button>
+                <div style="font-size: 11px; color: #64748b; font-style: italic; margin-top: 5px;">
+                    💡 <b>Инструкция:</b> Вначале синие молекулы заперты слева, оранжевые — справа. Нажмите кнопку, чтобы открыть проход. Следите за нижним графиком — энтропия (хаос) устремится вверх и зафиксируется на максимуме, откуда уже никогда не упадет. Время пошло в одну сторону!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script {nonce}>
+        const canvas = document.getElementById('entropyCanvas');
+        const ctx = canvas.getContext('2d');
+        const chartCanvas = document.getElementById('eChartCanvas');
+        const cCtx = chartCanvas.getContext('2d');
+
+        const radius = 4;
+        let isPartitionPresent = true;
+        let molecules = [];
+        let entropyHistory = [];
+
+        // Генерируем 50 СИНИХ молекул СЛЕВА
+        for (let i = 0; i < 50; i++) {
+            let angle = Math.random() * Math.PI * 2;
+            molecules.push({
+                x: Math.random() * 180 + 10,
+                y: Math.random() * (canvas.height - 20) + 10,
+                vx: Math.cos(angle) * 2.5, vy: Math.sin(angle) * 2.5,
+                type: 'blue'
+            });
+        }
+
+        // Генерируем 50 ОРАНЖЕВЫХ молекул СПРАВА
+        for (let i = 0; i < 50; i++) {
+            let angle = Math.random() * Math.PI * 2;
+            molecules.push({
+                x: Math.random() * 180 + 210,
+                y: Math.random() * (canvas.height - 20) + 10,
+                vx: Math.cos(angle) * 2.5, vy: Math.sin(angle) * 2.5,
+                type: 'orange'
+            });
+        }
+
+        function updatePhysics() {
+            // 1. Движение и отскок от внешних стенок
+            for (let m of molecules) {
+                m.x += m.vx; m.y += m.vy;
+
+                if (m.x < radius || m.x > canvas.width - radius) m.vx = -m.vx;
+                if (m.y < radius || m.y > canvas.height - radius) m.vy = -m.vy;
+
+                // Механика центральной перегородки (x = 200)
+                if (isPartitionPresent) {
+                    if (m.type === 'blue' && m.x > 200 - radius) { m.x = 200 - radius; m.vx = -m.vx; }
+                    if (m.type === 'orange' && m.x < 200 + radius) { m.x = 200 + radius; m.vx = -m.vx; }
+                }
+
+                // Удержание в границах холста
+                if (m.x < radius) m.x = radius; if (m.x > canvas.width - radius) m.x = canvas.width - radius;
+                if (m.y < radius) m.y = radius; if (m.y > canvas.height - radius) m.y = canvas.height - radius;
+            }
+
+            // 2. Взаимные парные столкновения молекул
+            for (let i = 0; i < molecules.length; i++) {
+                for (let j = i + 1; j < molecules.length; j++) {
+                    let m1 = molecules[i]; let m2 = molecules[j];
+                    let dx = m2.x - m1.x; let dy = m2.y - m1.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+
+                    if (dist < radius * 2) {
+                        let nx = dx / dist; let ny = dy / dist;
+                        let kx = m1.vx - m2.vx; let ky = m1.vy - m2.vy;
+                        let p = nx * kx + ny * ky;
+                        if (p > 0) {
+                            m1.vx -= p * nx; m1.vy -= p * ny;
+                            m2.vx += p * nx; m2.vy += p * ny;
+                        }
+                    }
+                }
+            }
+
+            // 3. Вычисление информационной энтропии Больцмана
+            // Считаем, сколько молекул каждого типа находится в левой половине
+            let blueLeft = 0;
+            let orangeLeft = 0;
+            for (let m of molecules) {
+                if (m.x < 200) {
+                    if (m.type === 'blue') blueLeft++;
+                    else orangeLeft++;
+                }
+            }
+
+            // Идеальный баланс перемешивания — когда слева 25 синих и 25 оранжевых.
+            // Отклонение от этого баланса определяет текущую энтропию.
+            let deviation = Math.abs(blueLeft - 25) + Math.abs(orangeLeft - 25);
+            // Превращаем отклонение в красивый график роста энтропии (от 0 до 100)
+            let currentEntropy = 100 - (deviation / 50) * 100;
+            
+            entropyHistory.push(currentEntropy);
+            if (entropyHistory.length > canvas.width) entropyHistory.shift();
+        }
+
+        function drawGas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Отрисовка молекул газов
+            for (let m of molecules) {
+                ctx.fillStyle = m.type === 'blue' ? '#38bdf8' : '#f97316';
+                ctx.beginPath(); ctx.arc(m.x, m.y, radius, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // Центральная перегородка
+            if (isPartitionPresent) {
+                ctx.strokeStyle = '#64748b'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(200, 0); ctx.lineTo(200, canvas.height); ctx.stroke();
+            }
+            
+            ctx.fillStyle = '#64748b'; ctx.font = '10px Courier New';
+            ctx.fillText("ИЗОЛИРОВАННАЯ СИСТЕМА", 15, 20);
+        }
+
+        function drawChart() {
+            cCtx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+
+            // Сетка графика
+            cCtx.strokeStyle = '#1e2937'; cCtx.lineWidth = 1;
+            cCtx.beginPath();
+            for(let h=30; h<chartCanvas.height; h+=30) {
+                cCtx.moveTo(0, h); cCtx.lineTo(chartCanvas.width, h);
+            }
+            cCtx.stroke();
+
+            // Отрисовка линии энтропии (Стрела времени)
+            cCtx.strokeStyle = '#f59e0b'; cCtx.lineWidth = 2;
+            cCtx.beginPath();
+            for (let i = 0; i < entropyHistory.length; i++) {
+                let chartY = chartCanvas.height - (entropyHistory[i] / 100) * (chartCanvas.height - 30) - 10;
+                cCtx.lineTo(i, chartY);
+            }
+            cCtx.stroke();
+
+            cCtx.fillStyle = '#64748b'; cCtx.font = '10px Courier New';
+            cCtx.fillText("ГРАФИК ЭНТРОПИИ S (СТРЕЛА ВРЕМЕНИ)", 15, 20);
+            cCtx.fillText("Время (t) ➔", chartCanvas.width - 90, chartCanvas.height - 10);
+        }
+
+        function loop() {
+            updatePhysics();
+            drawGas();
+            drawChart();
+            requestAnimationFrame(loop);
+        }
+
+        const partitionBtn = document.getElementById('partitionBtn');
+        partitionBtn.addEventListener('click', () => {
+            isPartitionPresent = !isPartitionPresent;
+            if (!isPartitionPresent) {
+                partitionBtn.textContent = "ВЕРНУТЬ ПЕРЕГОРОДКУ";
+                partitionBtn.classList.add('active');
+            } else {
+                partitionBtn.textContent = "УБРАТЬ ЦЕНТРАЛЬНУЮ ПЕРЕГОРОДКУ";
+                partitionBtn.classList.remove('active');
+            }
+        });
+
+        loop();
+    </script>
+</body>
+</html>

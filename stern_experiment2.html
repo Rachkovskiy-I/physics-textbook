@@ -1,0 +1,182 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Молекулярная физика — Опыт Штерна</title>
+    <style>
+        body {
+            background-color: #090d16;
+            color: #f1f5f9;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 { color: #14b8a6; margin-bottom: 5px; font-size: 22px; }
+        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .layout { display: flex; gap: 25px; background: #111827; padding: 20px; border-radius: 8px; border: 1px solid #1f2937; }
+        canvas { background: #03050a; border-radius: 4px; border: 1px solid #374151; }
+        .sidebar { width: 330px; display: flex; flex-direction: column; gap: 15px; }
+        .pseudocode { background: #030712; padding: 12px; border-radius: 6px; font-size: 11px; color: #14b8a6; line-height: 1.4; border-left: 3px solid #14b8a6; }
+        .controls { display: flex; flex-direction: column; gap: 12px; font-size: 12px; }
+        .btn { background: #14b8a6; color: #000; border: none; padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #0d9488; color: #fff; }
+        .value { color: #14b8a6; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>ТОМ 2. МОЛЕКУЛЯРНАЯ ФИЗИКА. ГЛАВА 3: ОПЫТ ШТЕРНА</h1>
+    <div class="subtitle">Экспериментальное измерение скоростей молекул газа с помощью вращающихся цилиндров</div>
+
+    <div class="layout">
+        <canvas id="sternCanvas" width="500" height="400"></canvas>
+
+        <div class="sidebar">
+            <div class="pseudocode">
+<b>Исправление алгоритма наката:</b><br>
+Чтобы избежать перекрытия («ёжика»),<br>
+испарение атомов происходит <br>
+<b>однократной квантовой вспышкой</b>.<br><br>
+Время_Полета t = L / V_атома<br>
+Угол_Сдвига = СКОРОСТЬ_ВРАЩЕНИЯ * t<br><br>
+Профиль напыления серебра наглядно <br>
+покажет истинный колокол Максвелла!
+            </div>
+
+            <div class="controls">
+                <button class="btn" id="flashBtn">ПРОИЗВЕСТИ ВСПЫШКУ ИСПАРЕНИЯ</button>
+                <br>
+                <div style="font-size: 11px; color: #64748b; font-style: italic; margin-top: 5px;">
+                    💡 <b>Инструкция:</b> Теперь цилиндры вращаются непрерывно. Нажмите кнопку, чтобы выбросить строго <b>одну пачку атомов серебра</b>. Вы увидите, как они долетят до экрана и сформируют один идеальный, изолированный колокол Максвелла без наложений!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script {nonce}>
+        const canvas = document.getElementById('sternCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const cx = 200;
+        const cy = 200;
+        const innerRadius = 35;
+        const outerRadius = 160;
+
+        let rotationAngle = 0;
+        const rotationSpeed = 0.015; // Постоянное контролируемое вращение
+
+        let atoms = [];
+        let silverLayer = new Array(360).fill(0);
+
+        function getMaxwellSpeed() {
+            // Сумма случайных чисел для имитации распределения Максвелла
+            return (Math.random() + Math.random() + Math.random() + Math.random()) * 0.6 + 1.1;
+        }
+
+        function triggerFlash() {
+            // Генерируем фиксированную пачку из 400 атомов одновременно (вспышка нагрева)
+            for(let i=0; i<400; i++) {
+                atoms.push({
+                    x: cx + innerRadius,
+                    y: cy,
+                    vx: getMaxwellSpeed(),
+                    active: true
+                });
+            }
+        }
+
+        function update() {
+            // Цилиндр крутится непрерывно
+            rotationAngle += rotationSpeed;
+            if (rotationAngle > Math.PI * 2) rotationAngle -= Math.PI * 2;
+
+            // Расчет полета атомов
+            for (let i = atoms.length - 1; i >= 0; i--) {
+                let a = atoms[i];
+                a.x += a.vx;
+
+                let dist = a.x - cx;
+                if (dist >= outerRadius) {
+                    // Вычисляем точный градус напыления с учетом текущего поворота
+                    let relativeAngle = -rotationAngle;
+                    let degree = Math.floor((relativeAngle * 180 / Math.PI) % 360);
+                    if (degree < 0) degree += 360;
+
+                    // Накапливаем слой серебра в конкретной ячейке
+                    silverLayer[degree] += 0.4; // меньший шаг для плавности бугорка
+                    atoms.splice(i, 1);
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Внешний вращающийся цилиндр
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(rotationAngle);
+
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(0, 0, outerRadius, 0, Math.PI * 2); ctx.stroke();
+
+            // Красная стартовая метка
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(outerRadius - 8, 0); ctx.lineTo(outerRadius + 8, 0); ctx.stroke();
+
+            // Отрисовка чистого слоя серебра
+            ctx.fillStyle = 'rgba(20, 184, 166, 0.85)';
+            for (let d = 0; d < 360; d++) {
+                if (silverLayer[d] > 0) {
+                    let rad = (d * Math.PI) / 180;
+                    let thickness = silverLayer[d];
+
+                    ctx.save();
+                    ctx.rotate(rad);
+                    ctx.fillRect(outerRadius - thickness, -1, thickness, 2);
+                    ctx.restore();
+                }
+            }
+            ctx.restore();
+
+            // 2. Внутренний неподвижный цилиндр со щелью
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.arc(cx, cy, innerRadius, 0.1, Math.PI * 2 - 0.1); ctx.stroke();
+            
+            // Нить испарения
+            ctx.fillStyle = '#f59e0b';
+            ctx.shadowBlur = 8; ctx.shadowColor = '#f59e0b';
+            ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Текст
+            ctx.fillStyle = '#64748b';
+            ctx.font = '10px Courier New';
+            ctx.fillText("ИСТОЧНИК СЕРЕБРА", cx - 45, cy - 12);
+            ctx.fillText("ЩЕЛЬ", cx + innerRadius + 5, cy - 8);
+            ctx.fillText("ВНЕШНИЙ ЦИЛИНДР-ЭКРАН", cx - 60, cy + outerRadius + 20);
+
+            // 3. Рисуем летящие атомы
+            ctx.fillStyle = '#2dd4bf';
+            for (let a of atoms) {
+                ctx.beginPath(); ctx.arc(a.x, a.y, 2, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        document.getElementById('flashBtn').addEventListener('click', triggerFlash);
+        loop();
+    </script>
+</body>
+</html>

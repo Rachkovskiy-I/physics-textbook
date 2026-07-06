@@ -1,0 +1,190 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Термодинамика — Распределение Максвелла</title>
+    <style>
+        body {
+            background-color: #090d16;
+            color: #f1f5f9;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 { color: #38bdf8; margin-bottom: 5px; font-size: 22px; }
+        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .layout { display: flex; gap: 25px; background: #111827; padding: 20px; border-radius: 8px; border: 1px solid #1f2937; }
+        canvas { background: #03050a; border-radius: 4px; border: 1px solid #374151; }
+        .sidebar { width: 330px; display: flex; flex-direction: column; gap: 15px; }
+        .pseudocode { background: #030712; padding: 12px; border-radius: 6px; font-size: 11px; color: #38bdf8; line-height: 1.4; border-left: 3px solid #38bdf8; }
+        .controls { display: flex; flex-direction: column; gap: 12px; font-size: 12px; }
+        .btn { background: #38bdf8; color: #000; border: none; padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #0284c7; color: #fff; }
+        .value { color: #38bdf8; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>ТОМ 2. ТЕРМОДИНАМИКА. ГЛАВА 2: ЗАКОН МАКСВЕЛЛА</h1>
+    <div class="subtitle">Порядок из хаоса: как соударения молекул формируют кривую распределения скоростей</div>
+
+    <div class="layout">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <canvas id="gasCanvas" width="400" height="230"></canvas>
+            <canvas id="chartCanvas" width="400" height="150"></canvas>
+        </div>
+
+        <div class="sidebar">
+            <div class="pseudocode">
+<b>Функция распределения Максвелла:</b><br>
+f(v) = 4π * (m/2πkT)^(3/2) * v² * e^(-mv²/2kT)<br><br>
+<b>Статистика кода в реальном времени:</b><br>
+ЦИКЛ По Всем Молекулам:<br>
+&nbsp;&nbsp;V_молекулы = КОРЕНЬ(vx² + vy²)<br>
+&nbsp;&nbsp;Столбец = Округлить(V_молекулы)<br>
+&nbsp;&nbsp;Гистограмма[Столбец] += 1<br>
+КОНЕЦ ЦИКЛА<br>
+Из чистого хаоса бильярдных ударов <br>
+вырисовывается идеальный колокол Максвелла!
+            </div>
+
+            <div class="controls">
+                <button class="btn" id="heatBtn">НАГРЕТЬ ГАЗ (ДОБАВИТЬ ЭНЕРГИЮ)</button>
+                <div style="font-size: 11px; color: #64748b; font-style: italic; margin-top: 5px;">
+                    💡 <b>Инструкция:</b> Посмотрите на нижний график. Столбцы показывают количество молекул с конкретной скоростью. Нажмите кнопку нагрева — вся система ускорится, а колокол графика плавно поползет вправо и станет более плоским!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script {nonce}>
+        const gasCanvas = document.getElementById('gasCanvas');
+        const gCtx = gasCanvas.getContext('2d');
+        const chartCanvas = document.getElementById('chartCanvas');
+        const cCtx = chartCanvas.getContext('2d');
+
+        const radius = 4;
+        const numMolecules = 100;
+        let molecules = [];
+
+        // Инициализируем молекулы
+        for (let i = 0; i < numMolecules; i++) {
+            let angle = Math.random() * Math.PI * 2;
+            let speed = 2.5; 
+            molecules.push({
+                x: Math.random() * (gasCanvas.width - 20) + 10,
+                y: Math.random() * (gasCanvas.height - 20) + 10,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed
+            });
+        }
+
+        function updatePhysics() {
+            // 1. Движение и отскок от стенок
+            for (let m of molecules) {
+                m.x += m.vx;
+                m.y += m.vy;
+
+                if (m.x < radius || m.x > gasCanvas.width - radius) m.vx = -m.vx;
+                if (m.y < radius || m.y > gasCanvas.height - radius) m.vy = -m.vy;
+                
+                if (m.x < radius) m.x = radius; if (m.x > gasCanvas.width - radius) m.x = gasCanvas.width - radius;
+                if (m.y < radius) m.y = radius; if (m.y > gasCanvas.height - radius) m.y = gasCanvas.height - radius;
+            }
+
+            // 2. Взаимные парные столкновения молекул
+            for (let i = 0; i < molecules.length; i++) {
+                for (let j = i + 1; j < molecules.length; j++) {
+                    let m1 = molecules[i];
+                    let m2 = molecules[j];
+
+                    let dx = m2.x - m1.x;
+                    let dy = m2.y - m1.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+
+                    if (dist < radius * 2) {
+                        let nx = dx / dist;
+                        let ny = dy / dist;
+
+                        let kx = m1.vx - m2.vx;
+                        let ky = m1.vy - m2.vy;
+                        let p = nx * kx + ny * ky;
+
+                        if (p > 0) { 
+                            m1.vx -= p * nx;
+                            m1.vy -= p * ny;
+                            m2.vx += p * nx;
+                            m2.vy += p * ny;
+                        }
+                    }
+                }
+            }
+        }
+
+        function drawGas() {
+            gCtx.clearRect(0, 0, gasCanvas.width, gasCanvas.height);
+            gCtx.fillStyle = '#38bdf8';
+            for (let m of molecules) {
+                gCtx.beginPath(); gCtx.arc(m.x, m.y, radius, 0, Math.PI * 2); gCtx.fill();
+            }
+            gCtx.fillStyle = '#64748b';
+            gCtx.font = '10px Courier New';
+            gCtx.fillText("СОСУД С ИДЕАЛЬНЫМ ГАЗОМ", 15, 20);
+        }
+
+        function drawChart() {
+            cCtx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+
+            const maxBins = 25;
+            let bins = new Array(maxBins).fill(0);
+            
+            for (let m of molecules) {
+                let speed = Math.sqrt(m.vx*m.vx + m.vy*m.vy);
+                let binIndex = Math.floor(speed * 2.5); 
+                if (binIndex >= maxBins) binIndex = maxBins - 1;
+                bins[binIndex]++;
+            }
+
+            // Ошибка исправлена: cCtx вместо ctx
+            cCtx.strokeStyle = '#1e2937';
+            cCtx.lineWidth = 1;
+            cCtx.beginPath();
+            for(let h=30; h<chartCanvas.height; h+=30) {
+                cCtx.moveTo(0, h); cCtx.lineTo(chartCanvas.width, h);
+            }
+            cCtx.stroke();
+
+            const binWidth = chartCanvas.width / maxBins;
+            cCtx.fillStyle = '#f59e0b';
+            for (let i = 0; i < maxBins; i++) {
+                let barHeight = bins[i] * 7; 
+                cCtx.fillRect(i * binWidth + 2, chartCanvas.height - barHeight, binWidth - 4, barHeight);
+            }
+
+            cCtx.fillStyle = '#64748b';
+            cCtx.font = '10px Courier New';
+            cCtx.fillText("ГИСТОГРАММА СКОРОСТЕЙ (ЗАКОН МАКСВЕЛЛА)", 15, 20);
+            cCtx.fillText("Скорость (v) ➔", chartCanvas.width - 110, chartCanvas.height - 10);
+        }
+
+        function loop() {
+            updatePhysics();
+            drawGas();
+            drawChart();
+            requestAnimationFrame(loop);
+        }
+
+        document.getElementById('heatBtn').addEventListener('click', () => {
+            for (let m of molecules) {
+                m.vx *= 1.3;
+                m.vy *= 1.3;
+            }
+        });
+
+        loop();
+    </script>
+</body>
+</html>

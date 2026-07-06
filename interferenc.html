@@ -1,0 +1,178 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Симулятор интерференции волн</title>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #e2e8f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { margin-bottom: 5px; font-size: 24px; color: #38bdf8; }
+        p { margin-top: 0; margin-bottom: 20px; color: #94a3b8; font-size: 14px; text-align: center;}
+        .container {
+            display: flex;
+            gap: 30px;
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        canvas {
+            border: 2px solid #334155;
+            border-radius: 6px;
+            background-color: #000;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 250px;
+            justify-content: center;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        label { font-size: 14px; font-weight: 600; color: #cbd5e1;}
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+        .value-display {
+            font-size: 12px;
+            color: #38bdf8;
+            align-self: flex-end;
+            margin-top: -4px;
+        }
+        .hint {
+            border-left: 3px solid #38bdf8;
+            padding-left: 10px;
+            font-style: italic;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Визуализатор псевдокода: Интерференция волн</h1>
+    <p>Математическое сложение двух синусоид на пиксельной сетке в реальном времени</p>
+
+    <div class="container">
+        <!-- Окно симуляции (Волновой бассейн) -->
+        <canvas id="waveCanvas" width="500" height="500"></canvas>
+
+        <!-- Панель управления параметрами псевдокода -->
+        <div class="controls">
+            <div class="control-group">
+                <label for="wavelength">Длина волны (период)</label>
+                <input type="range" id="wavelength" min="10" max="60" value="25">
+                <span class="value-display" id="wlValue">25 пкс</span>
+            </div>
+
+            <div class="control-group">
+                <label for="distance">Расстояние между источниками</label>
+                <input type="range" id="distance" min="20" max="300" value="120">
+                <span class="value-display" id="distValue">120 пкс</span>
+            </div>
+            
+            <div class="hint">
+                💡 <b>Управление:</b> Двигайте ползунки, чтобы менять константы алгоритма. Вы увидите, как «мёртвые зоны» (тёмные лучи полного гашения волн) мгновенно перестраиваются!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Элементы интерфейса
+        const wlInput = document.getElementById('wavelength');
+        const distInput = document.getElementById('distance');
+        const wlValue = document.getElementById('wlValue');
+        const distValue = document.getElementById('distValue');
+
+        // Создаем буфер пикселей для быстрой отрисовки (как в псевдокоде)
+        const imgData = ctx.createImageData(width, height);
+        const data = imgData.data;
+
+        let time = 0;
+        const frequency = 0.15; // Скорость течения времени
+
+        function animate() {
+            // Считываем текущие параметры из ползунков
+            const wavelength = parseFloat(wlInput.value);
+            const srcDistance = parseFloat(distInput.value);
+            
+            wlValue.textContent = wavelength + " пкс";
+            distValue.textContent = srcDistance + " пкс";
+
+            time += frequency;
+
+            // Вычисляем координаты двух источников (по центру экрана)
+            const src1 = { x: width / 2 - srcDistance / 2, y: height / 2 };
+            const src2 = { x: width / 2 + srcDistance / 2, y: height / 2 };
+
+            // Двойной цикл: проходим по каждому пикселю X и Y
+            for (let y = 0; y < height; y += 2) { // шаг 2 для оптимизации скорости
+                for (let x = 0; x < width; x += 2) {
+                    
+                    // 1. Расстояния до источников
+                    const d1 = Math.sqrt((x - src1.x) ** 2 + (y - src1.y) ** 2);
+                    const d2 = Math.sqrt((x - src2.x) ** 2 + (y - src2.y) ** 2);
+
+                    // 2. Фазы волн (синусоиды)
+                    const wave1 = Math.sin(d1 / wavelength - time);
+                    const wave2 = Math.sin(d2 / wavelength - time);
+
+                    // 3. Интерференция (сложение)
+                    const totalAmplitude = wave1 + wave2; // Результат от -2 до +2
+
+                    // 4. Перевод в цвет (неоновый синий для гребней, черный для затухания)
+                    // Нормализуем значение от 0 до 255
+                    const brightness = Math.floor((totalAmplitude + 2) * 63.75); 
+
+                    // Закрашиваем блок 2х2 пикселя
+                    for (let ny = 0; ny < 2; ny++) {
+                        for (let nx = 0; nx < 2; nx++) {
+                            const pixelIndex = ((y + ny) * width + (x + nx)) * 4;
+                            
+                            // Формула цвета (R, G, B, Alpha)
+                            data[pixelIndex] = Math.floor(brightness * 0.2);     // Немного красного
+                            data[pixelIndex + 1] = Math.floor(brightness * 0.7); // Зеленый
+                            data[pixelIndex + 2] = brightness;                   // Много синего (основа)
+                            data[pixelIndex + 3] = 255;                          // Непрозрачность
+                        }
+                    }
+                }
+            }
+
+            // Отрисовываем массив пикселей на экран
+            ctx.putImageData(imgData, 0, 0);
+
+            // Визуально подсвечиваем сами источники точками
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath(); ctx.arc(src1.x, src1.y, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(src2.x, src2.y, 4, 0, Math.PI * 2); ctx.fill();
+
+            // Запрашиваем следующий кадр анимации
+            requestAnimationFrame(animate);
+        }
+
+        // Запуск бесконечного цикла симуляции
+        animate();
+    </script>
+</body>
+</html>

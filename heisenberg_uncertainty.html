@@ -1,0 +1,178 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Квантовая физика — Принцип Гейзенберга</title>
+    <style>
+        body {
+            background-color: #090d16;
+            color: #f1f5f9;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 { color: #f59e0b; margin-bottom: 5px; font-size: 22px; }
+        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .layout { display: flex; gap: 25px; background: #111827; padding: 20px; border-radius: 8px; border: 1px solid #1f2937; }
+        canvas { background: #020306; border-radius: 4px; border: 1px solid #374151; }
+        .sidebar { width: 330px; display: flex; flex-direction: column; gap: 15px; }
+        .pseudocode { background: #030712; padding: 12px; border-radius: 6px; font-size: 11px; color: #f59e0b; line-height: 1.4; border-left: 3px solid #f59e0b; }
+        .controls { display: flex; flex-direction: column; gap: 12px; font-size: 12px; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        .value { color: #f59e0b; font-weight: bold; }
+        .btn { background: #f59e0b; color: #000; border: none; padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #d97706; }
+    </style>
+</head>
+<body>
+
+    <h1>ТОМ 4. КВАНТОВАЯ ФИЗИКА. ГЛАВА 8: ПРИНЦИП ГЕЙЗЕНБЕРГА</h1>
+    <div class="subtitle">Соотношение неопределенностей: сжатие координаты (Δx) взрывает импульс (Δp)</div>
+
+    <div class="layout">
+        <canvas id="heisenbergCanvas" width="500" height="400"></canvas>
+
+        <div class="sidebar">
+            <div class="pseudocode">
+<b>Закон Вернера Гейзенберга:</b><br>
+Δx * Δp_y ≥ ℏ / 2<br><br>
+<b>Логика квантовой щели:</b><br>
+Δx = Текущая Ширина Щели<br>
+Δp_y = Постоянная_H / Δx<br><br>
+Электрон.vy = СЛУЧАЙНО(-Δp_y, +Δp_y)<br>
+Чем уже щель (меньше Δx), тем шире <br>
+веер разлета электронов на экране!
+            </div>
+
+            <div class="controls">
+                <label>Ширина щели (Координатное окно Δx):</label>
+                <input type="range" id="slitSlider" min="8" max="100" value="60">
+                <div>Текущая Δx: <span id="slitValue" class="value">60 пкс</span></div>
+                <br>
+                <button class="btn" id="clearBtn">ОЧИСТИТЬ ФОСФОРНЫЙ ЭКРАН</button>
+            </div>
+        </div>
+    </div>
+
+    <script {nonce}>
+        const canvas = document.getElementById('heisenbergCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const slitX = 200;
+        const screenX = 460;
+        const hConstant = 70; // Коэффициент квантовой неопределенности
+
+        let particles = [];
+        
+        // Виртуальный фосфорный экран для сохранения вспышек
+        const pScreen = document.createElement('canvas');
+        pScreen.width = 500;
+        pScreen.height = 400;
+        const pCtx = pScreen.getContext('2d');
+        pCtx.fillStyle = 'rgba(245, 158, 11, 0.15)'; // оранжевые точки накопления попаданий
+
+        function update() {
+            const slitWidth = parseFloat(document.getElementById('slitSlider').value);
+            document.getElementById('slitValue').textContent = slitWidth + " пкс";
+
+            // Генерация пучка электронов слева
+            if (Math.random() < 0.5) {
+                // Электроны изначально летят строго горизонтально
+                particles.push({
+                    x: 10,
+                    y: 200 + (Math.random() * (slitWidth - 2) - slitWidth/2),
+                    vx: 5,
+                    vy: 0,
+                    collided: false
+                });
+            }
+
+            // Физическое ядро симуляции
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Прохождение через створки щели
+                if (p.x >= slitX && !p.collided) {
+                    p.collided = true;
+                    
+                    // Проверяем, попал ли электрон в открытый створ щели
+                    let slitTop = 200 - slitWidth / 2;
+                    let slitBottom = 200 + slitWidth / 2;
+
+                    if (p.y >= slitTop && p.y <= slitBottom) {
+                        // КВАНТОВОЕ ЧУДО: Прошел щель -> Пересчитываем неопределенность импульса vy
+                        let maxVy = hConstant / slitWidth;
+                        // Электрон случайным образом меняет вектор скорости в зависимости от узости щели
+                        p.vy = (Math.random() * 2 - 1) * maxVy;
+                    } else {
+                        // Врезался в непрозрачную ширму -> удаляем
+                        particles.splice(i, 1);
+                        continue;
+                    }
+                }
+
+                // Удар об фосфорный экран
+                if (p.x >= screenX) {
+                    pCtx.beginPath();
+                    pCtx.arc(screenX, p.y, 2, 0, Math.PI * 2);
+                    pCtx.fill();
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const slitWidth = parseFloat(document.getElementById('slitSlider').value);
+
+            // 1. Отрисовка накопленных люминофором точек
+            ctx.drawImage(pScreen, 0, 0);
+
+            // 2. Рисуем ширму со щелью
+            ctx.fillStyle = '#334155';
+            let slitTop = 200 - slitWidth / 2;
+            let slitBottom = 200 + slitWidth / 2;
+            // Верхняя створка ширмы
+            ctx.fillRect(slitX, 0, 10, slitTop);
+            // Нижняя створка ширмы
+            ctx.fillRect(slitX, slitBottom, 10, canvas.height - slitBottom);
+            
+            // Подпись ширмы
+            ctx.fillStyle = '#64748b';
+            ctx.font = '10px Courier New';
+            ctx.fillText("ЩЕЛЬ Δx", slitX - 15, 25);
+
+            // Правый экран регистрации
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(screenX, 20, 4, canvas.height - 40);
+            ctx.fillText("ЭКРАН Δp", screenX - 15, 15);
+
+            // 3. Отрисовка летящих электронов (оранжевые кванты)
+            ctx.fillStyle = '#fbbf24';
+            ctx.shadowBlur = 6;
+            ctx.shadowColor = '#fbbf24';
+            for (let p of particles) {
+                ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            pCtx.clearRect(0, 0, pScreen.width, pScreen.height);
+        });
+
+        loop();
+    </script>
+</body>
+</html>

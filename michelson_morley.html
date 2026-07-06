@@ -1,0 +1,166 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Оптика — Опыт Майкельсона-Морли</title>
+    <style>
+        body {
+            background-color: #090d16;
+            color: #f1f5f9;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 { color: #38bdf8; margin-bottom: 5px; font-size: 22px; }
+        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .layout { display: flex; gap: 25px; background: #111827; padding: 20px; border-radius: 8px; border: 1px solid #1f2937; }
+        canvas { background: #04060d; border-radius: 4px; border: 1px solid #374151; }
+        .sidebar { width: 330px; display: flex; flex-direction: column; gap: 15px; }
+        .pseudocode { background: #030712; padding: 12px; border-radius: 6px; font-size: 11px; color: #38bdf8; line-height: 1.4; border-left: 3px solid #38bdf8; }
+        .controls { display: flex; flex-direction: column; gap: 12px; font-size: 12px; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        .value { color: #38bdf8; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>ТОМ 4. ОПТИКА. ГЛАВА 4: ОПЫТ МАЙКЕЛЬСОНА-МОРЛИ</h1>
+    <div class="subtitle">Поиск эфирного ветра: доказательство постоянства скорости света</div>
+
+    <div class="layout">
+        <canvas id="mmCanvas" width="500" height="400"></canvas>
+
+        <div class="sidebar">
+            <div class="pseudocode">
+<b>Логика интерферометра:</b><br>
+t_горизонт = 2L / (c * (1 - v²/c²))<br>
+t_вертикал = 2L / (c * КОРЕНЬ(1 - v²/c²))<br><br>
+<b>Отрисовка экрана (Детектора):</b><br>
+Δt = t_горизонт - t_вертикал<br>
+Яркость = Cos(Δt * Частота_Света)<br>
+// В реальности Δt всегда равна 0,<br>
+// так как гипотеза эфира (v) ложна!
+            </div>
+
+            <div class="controls">
+                <label>Гипотетическая скорость эфирного ветра (v):</label>
+                <input type="range" id="etherSlider" min="0" max="0.5" step="0.01" value="0">
+                <div>Скорость ветра: <span id="etherValue" class="value">0.00 c</span></div>
+                <div style="font-size: 11px; color: #64748b; font-style: italic; margin-top: 5px;">
+                    * В реальном эксперименте этот ползунок физически заклинило на нуле, что опровергло существование материального эфира.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mmCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Геометрия прибора
+        const centerX = 200;
+        const centerY = 250;
+        const armLength = 140;
+
+        let time = 0;
+
+        function update() {
+            time += 0.2;
+            const v = parseFloat(document.getElementById('etherSlider').value);
+            document.getElementById('etherValue').textContent = v.toFixed(2) + " c";
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const v = parseFloat(document.getElementById('etherSlider').value);
+
+            // 1. Рисуем элементы прибора
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 4;
+            // Горизонтальное плечо
+            ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(centerX + armLength, centerY); ctx.stroke();
+            // Вертикальное плечо
+            ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(centerX, centerY - armLength); ctx.stroke();
+
+            // Зеркала
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(centerX + armLength, centerY - 15, 5, 30); // Правое
+            ctx.fillRect(centerX - 15, centerY - armLength - 5, 30, 5); // Верхнее
+            
+            // Полупрозрачное центральное зеркало (под углом 45)
+            ctx.strokeStyle = '#a855f7';
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(centerX - 10, centerY + 10); ctx.lineTo(centerX + 10, centerY - 10); ctx.stroke();
+
+            // Источник лазера
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(40, centerY - 8, 25, 16);
+            ctx.fillStyle = '#64748b';
+            ctx.font = '10px Courier New';
+            ctx.fillText("ЛАЗЕР", 40, centerY - 14);
+
+            // Экран-интерферометр (Детектор)
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(centerX - 25, 340, 50, 40);
+            ctx.strokeStyle = '#334155';
+            ctx.strokeRect(centerX - 25, 340, 50, 40);
+
+            // 2. Рисуем лазерные лучи (импульсы)
+            ctx.fillStyle = '#f43f5e';
+            
+            // Луч от лазера к центру
+            ctx.fillRect(65, centerY - 1, centerX - 65, 2);
+
+            // Расчет сдвига фазы для анимации лучей при наличии гипотетического ветра
+            let speedX = 3;
+            let speedY = 3;
+            
+            // Визуализируем бегущие точки-волны
+            for (let i = 0; i < armLength; i += 20) {
+                let pos = (i + time * speedX) % armLength;
+                
+                // Горизонтальный луч (туда и обратно)
+                ctx.beginPath(); ctx.arc(centerX + pos, centerY, 3, 0, Math.PI * 2); ctx.fill();
+                
+                // Вертикальный луч со смещением от эфирного ветра v
+                let posY = (i + time * speedY) % armLength;
+                let waveShift = v * 15; // масштаб искажения волны ветром
+                ctx.beginPath(); ctx.arc(centerX, centerY - posY, 3, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // Направляем лучи обратно на детектор
+            ctx.fillRect(centerX - 1, centerY, 2, 340 - centerY);
+
+            // 3. ОТРИСОВКА ИНТЕРФЕРЕНЦИОННОЙ КАРТИНЫ НА ЭКРАНЕ
+            // Имитируем сдвиг полос от изменения скорости эфира v
+            let phaseShift = v * Math.PI * 4; 
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(centerX - 23, 342, 46, 36);
+            ctx.clip(); // Ограничиваем рисование только внутри экрана
+
+            for (let px = -25; px < 25; px++) {
+                // Синусоида полос зависит от координаты и сдвига фазы
+                let intensity = Math.sin(px * 0.4 + phaseShift);
+                let brightness = Math.floor((intensity + 1) * 127.5);
+                ctx.fillStyle = `rgb(0, ${brightness}, 0)`; // зеленые полосы интерференции
+                ctx.fillRect(centerX + px, 342, 1, 36);
+            }
+            ctx.restore();
+            ctx.fillText("ЭКРАН", centerX - 18, 332);
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+</html>

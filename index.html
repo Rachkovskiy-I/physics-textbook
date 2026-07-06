@@ -1,0 +1,194 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Māyā: Цифровой Учебник Фундаментальной Физики</title>
+    <style>
+        body {
+            background-color: #090d16;
+            color: #f1f5f9;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 40px 20px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            max-width: 700px;
+        }
+        h1 { color: #f59e0b; font-size: 28px; letter-spacing: 2px; margin-bottom: 5px; }
+        .manifesto { color: #64748b; font-size: 13px; font-style: italic; line-height: 1.5; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 380px);
+            gap: 25px;
+            max-width: 800px;
+        }
+        .volume {
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .volume-title {
+            font-size: 16px;
+            font-weight: bold;
+            border-bottom: 1px dashed #374151;
+            padding-bottom: 8px;
+            margin-bottom: 5px;
+        }
+        .vol-1 { color: #fbbf24; }
+        .vol-2 { color: #10b981; }
+        .vol-3 { color: #f59e0b; }
+        .vol-4 { color: #a855f7; }
+        
+        .chapter-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        .chapter-link {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.2s;
+        }
+        .chapter-link:hover {
+            color: #f1f5f9;
+        }
+        .chapter-link::before {
+            content: "➔";
+            font-size: 10px;
+        }
+        .badge {
+            font-size: 9px;
+            background: #1e293b;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #475569;
+            margin-left: auto;
+        }
+        .badge.ready {
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>ПРОЕКТ MĀYĀ: ЦИФРОВАЯ ФИЗИКА</h1>
+        <div class="manifesto">
+            Интерактивный курс общей физики Савельева и Ландау-Лифшица.<br>
+            Вселенная как вычислимая структура данных, дискретные регистры памяти и пошаговые квантовые алгоритмы.
+        </div>
+    </div>
+
+    <div class="grid">
+        <!-- ТОМ 1 -->
+        <div class="volume">
+            <div class="volume-title vol-1">ТОМ 1. МЕХАНИКА</div>
+            <ul class="chapter-list">
+                <li>
+                    <a class="chapter-link" href="gravity.html">Гл. 1: Гравитационная Орбита</a>
+                    <span class="badge ready">Запущено</span>
+                </li>
+                <li>
+                    <span class="chapter-link" style="color: #475569; cursor: not-allowed;">Гл. 2: Законы соударения тел</span>
+                    <span class="badge">В плане</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- ТОМ 2 -->
+        <div class="volume">
+            <div class="volume-title vol-2">ТОМ 2. ТЕРМОДИНАМИКА</div>
+            <ul class="chapter-list">
+                <li>
+                    <a class="chapter-link" href="brownian_motion.html">Гл. 1: Опыт Перрена (Броун)</a>
+                    <span class="badge ready">Запущено</span>
+                </li>
+                <li>
+                    <a class="chapter-link" href="maxwell_distribution2.html">Гл. 2: Закон Максвелла</a>
+                    <span class="badge ready">Запущено</span>
+                </li>
+                <li>
+                    <a class="chapter-link" href="stern_experiment2.html">Гл. 3: Опыт Отто Штерна</a>
+                    <span class="badge ready">Запущено</span>
+                </li>
+                <li>
+                    <a class="chapter-link" href="entropy_arrow.html">Гл. 4: Стрела Времени Больцмана</a>
+                    <span class="badge ready">Запущено</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- ТОМ 3 -->
+        <div class="volume">
+            <div class="volume-title vol-3">ТОМ 3. ЭЛЕКТРОДИНАМИКА</div>
+            <ul class="chapter-list">
+                <li>
+                    <a class="chapter-link" href="oersted_experiment.html">Гл. 1: Опыт Эрстеда (Магнетизм)</a>
+                    <span class="badge ready">Запущено</span>
+                </li>
+                <li>
+                    <span class="chapter-link" style="color: #475569; cursor: not-allowed;">Гл. 2: Сила Лоренца в поле</span>
+                    <span class="badge">В плане</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- ТОМ 4 -->
+        <div class="volume">
+            <div class="volume-title vol-4">ТОМ 4. КВАНТОВАЯ ОПТИКА</div>
+            <ul class="chapter-list">
+                <li>
+                    <a class="chapter-link" href="wave.html">Гл. 1: Интерференция Юнга</a>
+                    <span class="badge ready">Запущено</span>
+                </li>
+                <li>
+                    <a class="chapter-link" href="photoeffect.html">Гл. 2: Фотоэффект Макса Планка</a>
+                    <span class="badge ready">Запущено</span>
+                </li>
+                <li>
+                    <a class="chapter-link" href="frank_hertz.html">Гл. 3: Опыт Франка-Герца</a>
+                    <span class="badge ready">Запущено</span>
+                </li>
+                <li>
+                    <a class="chapter-link" href="michelson_morley.html">Гл. 4: Опыт Майкельсона-Морли</a>
+                    <span class="badge ready">Запущено</span>
+                </li>
+                <li>
+                    <a class="chapter-link" href="rutherford_scattering.html">Гл. 5: Опыт Эрнеста Резерфорда</a>
+                    <span class="badge ready">Запущено</span>
+                </li>
+                <li>
+                    <a class="chapter-link" href="davisson_germer.html">Гл. 6: Дифракция Дэвиссона</a>
+                    <span class="badge ready">Запущено</span>
+                </li>
+                <li>
+                    <a class="chapter-link" href="compton_effect.html">Гл. 7: Эффект Артура Комптона</a>
+                    <span class="badge ready">Запущено</span>
+                </li>
+                <li>
+                    <a class="chapter-link" href="heisenberg_uncertainty.html">Гл. 8: Квантовая Щель Гейзенберга</a>
+                    <span class="badge ready">Запущено</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+</body>
+</html>

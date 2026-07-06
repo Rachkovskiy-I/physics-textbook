@@ -1,0 +1,167 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Квантовая физика — Фотоэффект Планка</title>
+    <style>
+        body {
+            background-color: #090d16;
+            color: #f1f5f9;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 { color: #10b981; margin-bottom: 5px; font-size: 22px; }
+        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .layout { display: flex; gap: 25px; background: #111827; padding: 20px; border-radius: 8px; border: 1px solid #1f2937; }
+        canvas { background: #05070f; border-radius: 4px; border: 1px solid #374151; }
+        .sidebar { width: 320px; display: flex; flex-direction: column; gap: 15px; }
+        .pseudocode { background: #030712; padding: 12px; border-radius: 6px; font-size: 11px; color: #38bdf8; line-height: 1.4; border-left: 3px solid #38bdf8; }
+        .controls { display: flex; flex-direction: column; gap: 12px; font-size: 12px; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        .value { color: #10b981; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>КВАНТОВАЯ ФИЗИКА. ГЛАВА 2: ФОТОЭФФЕКТ</h1>
+    <div class="subtitle">Гипотеза Планка: Дискретные кванты света (E = hν) выбивают электроны</div>
+
+    <div class="layout">
+        <canvas id="quantumCanvas" width="500" height="400"></canvas>
+
+        <div class="sidebar">
+            <div class="pseudocode">
+<b>Закон Макса Планка и Эйнштейна:</b><br>
+hν = A_выхода + (mv² / 2)<br><br>
+<b>Логика симулятора:</b><br>
+Фотон.E = h * Частота<br>
+ЕСЛИ Фотон ударил Металл ТО:<br>
+&nbsp;&nbsp;ЕСЛИ Фотон.E > Работа_Выхода ТО:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Выбить_Электрон()<br>&nbsp;&nbsp;&nbsp;&nbsp;Электрон.vx = КОРЕНЬ(E - Работа)<br>
+&nbsp;&nbsp;ИНАЧЕ:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Фотон поглощен впустую (Тепло)<br>
+КОНЕЦ ЕСЛИ
+            </div>
+
+            <div class="controls">
+                <label>Частота света (Цвет / Энергия фотона ν):</label>
+                <input type="range" id="freqSlider" min="1.5" max="6" step="0.1" value="2">
+                <div>Текущий свет: <span id="colorName" class="value">Красный</span></div>
+                
+                <br>
+                <label>Работа выхода металла (А):</label>
+                <input type="range" id="workSlider" min="2" max="4.5" step="0.1" value="3">
+                <div>Порог металла: <span id="workValue" class="value">3.0 eV</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('quantumCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Константы симуляции
+        const h = 1.0; // Постоянная Планка (условная для масштаба экрана)
+        const metalX = 350; // Координата пластины металла
+
+        let photons = [];
+        let electrons = [];
+        let spawnTimer = 0;
+
+        function getLightColor(freq) {
+            if (freq < 2.2) return { name: 'Красный (Низкая E)', hex: '#ef4444' };
+            if (freq < 3.2) return { name: 'Зеленый (Средняя E)', hex: '#22c55e' };
+            if (freq < 4.2) return { name: 'Синий (Высокая E)', hex: '#3b82f6' };
+            return { name: 'Ультрафиолет (Макс E)', hex: '#a855f7' };
+        }
+
+        function update() {
+            const freq = parseFloat(document.getElementById('freqSlider').value);
+            const workFunction = parseFloat(document.getElementById('workSlider').value);
+            
+            const light = getLightColor(freq);
+            document.getElementById('colorName').textContent = light.name;
+            document.getElementById('colorName').style.color = light.hex;
+            document.getElementById('workValue').textContent = workFunction.toFixed(1) + " eV";
+
+            const photonEnergy = h * freq * 1.3; // расчет энергии фотона
+
+            // Генерация фотонов (луча света)
+            spawnTimer++;
+            if (spawnTimer % 6 === 0) {
+                photons.push({ x: 20, y: Math.random() * (canvas.height - 100) + 50, energy: photonEnergy });
+            }
+
+            // Движение фотонов
+            for (let i = photons.length - 1; i >= 0; i--) {
+                let f = photons[i];
+                f.x += 4; // скорость света в симуляции
+
+                // Проверка удара о металл
+                if (f.x >= metalX) {
+                    // Квантовая проверка фотоэффекта
+                    if (f.energy > workFunction) {
+                        // Энергии хватило -> рождается электрон
+                        let excessEnergy = f.energy - workFunction;
+                        let speed = Math.sqrt(excessEnergy) * 3; // скорость зависит от остатка энергии
+                        electrons.push({ x: metalX, y: f.y, vx: speed });
+                    }
+                    photons.splice(i, 1);
+                }
+            }
+
+            // Движение выбитых электронов
+            for (let i = electrons.length - 1; i >= 0; i--) {
+                let e = electrons[i];
+                e.x += e.vx;
+                // Удаляем улетевшие за экран электроны
+                if (e.x > canvas.width) {
+                    electrons.splice(i, 1);
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Рисуем пластину металла
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(metalX, 40, 20, canvas.height - 80);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '12px Courier New';
+            ctx.fillText("МЕТАЛЛ", metalX - 10, 30);
+
+            // Рисуем фотоны (светящиеся кванты-шарики)
+            const freq = parseFloat(document.getElementById('freqSlider').value);
+            const light = getLightColor(freq);
+            
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = light.hex;
+            ctx.fillStyle = light.hex;
+            for (let f of photons) {
+                ctx.beginPath(); ctx.arc(f.x, f.y, 4, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // Рисуем выбитые электроны (синие быстрые частицы)
+            ctx.shadowColor = '#06b6d4';
+            ctx.fillStyle = '#06b6d4';
+            for (let e of electrons) {
+                ctx.beginPath(); ctx.arc(e.x, e.y, 3, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.shadowBlur = 0; // сброс эффектов
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+</html>

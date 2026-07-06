@@ -1,0 +1,178 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Молекулярная физика — Опыт Перрена</title>
+    <style>
+        body {
+            background-color: #090d16;
+            color: #f1f5f9;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 { color: #10b981; margin-bottom: 5px; font-size: 22px; }
+        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .layout { display: flex; gap: 25px; background: #111827; padding: 20px; border-radius: 8px; border: 1px solid #1f2937; }
+        canvas { background: #03050a; border-radius: 4px; border: 1px solid #374151; }
+        .sidebar { width: 330px; display: flex; flex-direction: column; gap: 15px; }
+        .pseudocode { background: #030712; padding: 12px; border-radius: 6px; font-size: 11px; color: #10b981; line-height: 1.4; border-left: 3px solid #10b981; }
+        .controls { display: flex; flex-direction: column; gap: 12px; font-size: 12px; }
+        .btn { background: #10b981; color: #000; border: none; padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #059669; color: #fff; }
+        .value { color: #10b981; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>ТОМ 2. МОЛЕКУЛЯРНАЯ ФИЗИКА. ГЛАВА 1: ОПЫТ ПЕРРЕНА</h1>
+    <div class="subtitle">Броуновское движение: доказательство реальности теплового хаоса молекул</div>
+
+    <div class="layout">
+        <canvas id="brownianCanvas" width="500" height="400"></canvas>
+
+        <div class="sidebar">
+            <div class="pseudocode">
+<b>Теория Эйнштейна-Смолуховского:</b><br>
+⟨x²⟩ = (2 * R * T) / (N_A * 6π * η * r)<br><br>
+<b>Логика молекулярных пинков:</b><br>
+ДЛЯ Каждой Молекулы ЦИКЛ:<br>
+&nbsp;&nbsp;Дист = Расстояние(Молекула, Пыльца)<br>
+&nbsp;&nbsp;ЕСЛИ Дист < Радиус_Контакта ТО:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;// Импульс отдачи крупному телу<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Пыльца.vx += 2 * m * Молекула.vx / M<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Молекула.vx = -Молекула.vx<br>
+КОНЕЦ ЦИКЛА
+            </div>
+
+            <div class="controls">
+                <button class="btn" id="toggleMoleculesBtn">ПОКАЗАТЬ НЕВИДИМЫЕ МОЛЕКУЛЫ</button>
+                <div style="font-size: 11px; color: #64748b; font-style: italic; margin-top: 5px;">
+                    💡 <b>Внимание:</b> Нажмите кнопку, чтобы сделать «молекулы воды» видимыми. Вы увидите, что хаотичный, ломаный танец крупной жёлтой пылинки — это результат ежесекундных бомбардировок малым скрытым кодом!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script {nonce}>
+        const canvas = document.getElementById('brownianCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const pMass = 120;  // Масса крупной пылинки
+        const mMass = 1.2;  // Масса мелкой молекулы
+        const pRadius = 16;
+        const mRadius = 2;
+
+        let showMolecules = false;
+        let trajectory = [];
+
+        // Крупная броуновская частица
+        let pollen = { x: 250, y: 200, vx: 0, vy: 0 };
+
+        // Генерируем 150 невидимых фоновых молекул (тепловой резервуар)
+        let molecules = [];
+        for (let i = 0; i < 150; i++) {
+            let angle = Math.random() * Math.PI * 2;
+            let speed = Math.random() * 3 + 3; // высокие скорости хаоса
+            molecules.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed
+            });
+        }
+
+        function update() {
+            // 1. Двигаем и сталкиваем молекулы
+            for (let m of molecules) {
+                m.x += m.vx;
+                m.y += m.vy;
+
+                // Отскоки молекул от стенок контейнера
+                if (m.x < mRadius || m.x > canvas.width - mRadius) m.vx = -m.vx;
+                if (m.y < mRadius || m.y > canvas.height - mRadius) m.vy = -m.vy;
+
+                // Столкновение молекулы с крупной пылинкой
+                let dx = m.x - pollen.x;
+                let dy = m.y - pollen.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+
+                if (dist < pRadius + mRadius) {
+                    // Упругий удар: передача части импульса пылинке
+                    let normalX = dx / dist;
+                    let normalY = dy / dist;
+
+                    // Упрощенная физика передачи вектора скорости
+                    pollen.vx += (2 * mMass * m.vx) / pMass;
+                    pollen.vy += (2 * mMass * m.vy) / pMass;
+
+                    // Отскок молекулы
+                    m.vx = -m.vx;
+                    m.vy = -m.vy;
+                }
+            }
+
+            // 2. Движение пылинки под градом ударов + небольшое вязкое затухание среды среды
+            pollen.vx *= 0.98;
+            pollen.vy *= 0.98;
+            pollen.x += pollen.vx;
+            pollen.y += pollen.vy;
+
+            // Защита пылинки от вылета за границы
+            if (pollen.x < pRadius || pollen.x > canvas.width - pRadius) pollen.vx = -pollen.vx;
+            if (pollen.y < pRadius || pollen.y > canvas.height - pRadius) pollen.vy = -pollen.vy;
+
+            // Запись красивого ломаного следа
+            trajectory.push({ x: pollen.x, y: pollen.y });
+            if (trajectory.length > 250) trajectory.shift();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Рисуем исторический ломаный след Перрена
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            for (let t of trajectory) ctx.lineTo(t.x, t.y);
+            ctx.stroke();
+
+            // 2. Рисуем мелкие молекулы хаоса (если включен флаг видимости)
+            if (showMolecules) {
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+                for (let m of molecules) {
+                    ctx.beginPath(); ctx.arc(m.x, m.y, mRadius, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+
+            // 3. Рисуем массивную броуновскую частицу (пыльцу)
+            ctx.fillStyle = '#f59e0b';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#f59e0b';
+            ctx.beginPath(); ctx.arc(pollen.x, pollen.y, pRadius, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '10px Courier New';
+            ctx.fillText("ЧАСТИЦА СМОЛЫ (ПЫЛЬЦА)", pollen.x - 60, pollen.y - pRadius - 10);
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        const toggleBtn = document.getElementById('toggleMoleculesBtn');
+        toggleBtn.addEventListener('click', () => {
+            showMolecules = !showMolecules;
+            toggleBtn.textContent = showMolecules ? "СКРЫТЬ МОЛЕКУЛЫ" : "ПОКАЗАТЬ НЕВИДИМЫЕ МОЛЕКУЛЫ";
+        });
+
+        loop();
+    </script>
+</body>
+</html>

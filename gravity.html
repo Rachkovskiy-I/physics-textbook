@@ -1,0 +1,139 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Том 1: Механика — Гравитационная Орбита</title>
+    <style>
+        body {
+            background-color: #090d16;
+            color: #f1f5f9;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 { color: #f59e0b; margin-bottom: 5px; font-size: 22px; }
+        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .layout { display: flex; gap: 25px; background: #111827; padding: 20px; border-radius: 8px; border: 1px solid #1f2937; }
+        canvas { background: #000; border-radius: 4px; border: 1px solid #374151; }
+        .sidebar { width: 300px; display: flex; flex-direction: column; gap: 15px; }
+        .pseudocode { background: #030712; padding: 12px; border-radius: 6px; font-size: 11px; color: #10b981; line-height: 1.4; border-left: 3px solid #10b981; }
+        .controls { display: flex; flex-direction: column; gap: 10px; font-size: 12px; }
+        .btn { background: #f59e0b; color: #000; border: none; padding: 8px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #d97706; }
+    </style>
+</head>
+<body>
+
+    <h1>ТОМ 1. МЕХАНИКА. ГЛАВА 1: ГРАВИТАЦИЯ</h1>
+    <div class="subtitle">Интерактивная симуляция закона тяготения Ньютона (Метод Эйлера)</div>
+
+    <div class="layout">
+        <!-- Визуальный Монитор симуляции -->
+        <canvas id="spaceCanvas" width="500" height="500"></canvas>
+
+        <div class="sidebar">
+            <!-- Псевдокод алгоритма -->
+            <div class="pseudocode">
+<b>Параметры такта (dt):</b><br>
+ЦИКЛ_АНИМАЦИИ:<br>
+&nbsp;&nbsp;dx = Солнце.x - Планета.x<br>
+&nbsp;&nbsp;dy = Солнце.y - Планета.y<br>
+&nbsp;&nbsp;r = КОРЕНЬ(dx² + dy²)<br>
+&nbsp;&nbsp;Сила = G * (M * m) / r²<br>
+&nbsp;&nbsp;Ускорение = Сила / m<br>
+&nbsp;&nbsp;Планета.vx += Ускорение * (dx / r) * dt<br>
+&nbsp;&nbsp;Планета.vy += Ускорение * (dy / r) * dt<br>
+&nbsp;&nbsp;Планета.x += Планета.vx * dt<br>
+&nbsp;&nbsp;Планета.y += Планета.vy * dt<br>
+КОНЕЦ ЦИКЛА
+            </div>
+
+            <div class="controls">
+                <label>Начальная скорость планеты (Vy):</label>
+                <input type="range" id="speedSlider" min="1" max="6" step="0.1" value="3.5">
+                <button class="btn" id="resetBtn">ПЕРЕЗАПУСТИТЬ ТАКТ</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('spaceCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Масштаб и константы симуляции
+        const G = 1000; 
+        const dt = 0.1; 
+        
+        const sun = { x: 250, y: 250, mass: 50 };
+        let planet = { x: 250, y: 100, vx: 3.5, vy: 0, mass: 1 };
+        let trajectory = [];
+
+        function initSimulation() {
+            const startVx = parseFloat(document.getElementById('speedSlider').value);
+            planet = { x: 250, y: 100, vx: startVx, vy: 0, mass: 1 };
+            trajectory = [];
+        }
+
+        function updatePhysics() {
+            // Реализация математического ядра псевдокода
+            let dx = sun.x - planet.x;
+            let dy = sun.y - planet.y;
+            let r = Math.sqrt(dx * dx + dy * dy);
+            
+            // Защита от деления на ноль при столкновении
+            if (r < 10) return; 
+
+            let force = (G * sun.mass * planet.mass) / (r * r);
+            let acc = force / planet.mass;
+
+            // Изменение вектора скорости под воздействием гравитации
+            planet.vx += acc * (dx / r) * dt;
+            planet.vy += acc * (dy / r) * dt;
+
+            // Изменение координат
+            planet.x += planet.vx * dt;
+            planet.y += planet.vy * dt;
+
+            // Запись следа орбиты
+            trajectory.push({x: planet.x, y: planet.y});
+            if (trajectory.length > 300) trajectory.shift();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Отрисовка траектории (орбиты)
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let p of trajectory) {
+                ctx.lineTo(p.x, p.y);
+            }
+            ctx.stroke();
+
+            // Массивное Солнце
+            ctx.fillStyle = '#f59e0b';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#f59e0b';
+            ctx.beginPath(); ctx.arc(sun.x, sun.y, 12, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0; // сброс свечения
+
+            // Легкая Планета
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath(); ctx.arc(planet.x, planet.y, 5, 0, Math.PI * 2); ctx.fill();
+        }
+
+        function loop() {
+            updatePhysics();
+            render();
+            requestAnimationFrame(loop);
+        }
+
+        document.getElementById('resetBtn').addEventListener('click', initSimulation);
+        loop();
+    </script>
+</body>
+</html>

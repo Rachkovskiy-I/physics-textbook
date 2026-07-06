@@ -1,0 +1,190 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Электродинамика — Опыт Эрстеда</title>
+    <style>
+        body {
+            background-color: #090d16;
+            color: #f1f5f9;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1 { color: #f59e0b; margin-bottom: 5px; font-size: 22px; }
+        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .layout { display: flex; gap: 25px; background: #111827; padding: 20px; border-radius: 8px; border: 1px solid #1f2937; }
+        canvas { background: #05070f; border-radius: 4px; border: 1px solid #374151; }
+        .sidebar { width: 330px; display: flex; flex-direction: column; gap: 15px; }
+        .pseudocode { background: #030712; padding: 12px; border-radius: 6px; font-size: 11px; color: #fbbf24; line-height: 1.4; border-left: 3px solid #fbbf24; }
+        .controls { display: flex; flex-direction: column; gap: 12px; font-size: 12px; }
+        .btn { background: #3b82f6; color: #fff; border: none; padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        .btn.active { background: #ef4444; }
+        .value { color: #f59e0b; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>ТОМ 3. ЭЛЕКТРОДИНАМИКА. ГЛАВА 1: ОПЫТ ЭРСТЕДА</h1>
+    <div class="subtitle">Связь электричества и магнетизма: ток отклоняет магнитную стрелку</div>
+
+    <div class="layout">
+        <canvas id="oerstedCanvas" width="500" height="400"></canvas>
+
+        <div class="sidebar">
+            <div class="pseudocode">
+<b>Закон Био-Савара-Лапласа:</b><br>
+B = (μ₀ * I) / (2 * π * r)<br><br>
+<b>Алгоритм сетки компасов:</b><br>
+ЕСЛИ Ток.Включен == ИСТИНА ТО:<br>
+&nbsp;&nbsp;Направление = Знак(Ток.Сила)<br>
+&nbsp;&nbsp;Стрелка.Угол_Цель = Направление * 90°<br>
+ИНАЧЕ:<br>
+&nbsp;&nbsp;// Поле Земли (Север)<br>
+&nbsp;&nbsp;Стрелка.Угол_Цель = 0°<br>
+КОНЕЦ ЕСЛИ<br>
+Стрелка.Поворот_Шаг()
+            </div>
+
+            <div class="controls">
+                <button class="btn" id="wireBtn">ВКЛЮЧИТЬ ЭЛЕКТРИЧЕСКИЙ ТОК</button>
+                <br>
+                <label>Направление и сила тока (I):</label>
+                <input type="range" id="currentSlider" min="-5" max="5" step="1" value="3">
+                <div>Ток в проводе: <span id="currentValue" class="value">3 A</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('oerstedCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const wireY = 200; // Провод по центру экрана по горизонтали
+        let isCurrentOn = false;
+        
+        // Массив электронов в проводе
+        let electrons = [];
+        for (let i = 0; i < 20; i++) {
+            electrons.push({ x: (canvas.width / 20) * i, y: wireY });
+        }
+
+        // Сетка магнитных стрелок (компасов)
+        let compasses = [];
+        for (let x = 40; x < canvas.width; x += 60) {
+            for (let y = 50; y < canvas.height; y += 60) {
+                if (Math.abs(y - wireY) > 25) { // не ставим стрелки прямо на провод
+                    compasses.push({ x: x, y: y, angle: 0 });
+                }
+            }
+        }
+
+        function update() {
+            const currentAmp = parseInt(document.getElementById('currentSlider').value);
+            document.getElementById('currentValue').textContent = currentAmp + " A";
+
+            // Движение электронов
+            if (isCurrentOn && currentAmp !== 0) {
+                for (let e of electrons) {
+                    // Электроны бегут навстречу току (физический факт)
+                    e.x -= currentAmp * 0.7; 
+                    if (e.x < 0) e.x = canvas.width;
+                    if (e.x > canvas.width) e.x = 0;
+                }
+            }
+
+            // Логика поворота компасов
+            for (let c of compasses) {
+                let targetAngle = 0; // По умолчанию смотрят наверх (Север)
+
+                if (isCurrentOn && currentAmp !== 0) {
+                    let distanceToWire = c.y - wireY;
+                    // Знак расстояния определяет, выше или ниже провода находится компас
+                    let side = distanceToWire > 0 ? 1 : -1;
+                    let direction = currentAmp > 0 ? 1 : -1;
+                    
+                    // Магнитное поле закручивается вокруг провода по правилу правой руки
+                    targetAngle = (Math.PI / 2) * side * direction;
+                }
+
+                // Плавная интерполяция угла (имитация инерции стрелки)
+                let angleDiff = targetAngle - c.angle;
+                c.angle += angleDiff * 0.15;
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Рисуем медный проводник
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 6;
+            ctx.beginPath(); ctx.moveTo(0, wireY); ctx.lineTo(canvas.width, wireY); ctx.stroke();
+
+            // Рисуем электроны в проводе (светящиеся точки)
+            if (isCurrentOn) {
+                ctx.fillStyle = '#67e8f9';
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = '#67e8f9';
+                for (let e of electrons) {
+                    ctx.beginPath(); ctx.arc(e.x, e.y, 3, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.shadowBlur = 0;
+            }
+
+            // Рисуем сетку магнитных стрелок
+            for (let c of compasses) {
+                ctx.save();
+                ctx.translate(c.x, c.y);
+                ctx.rotate(c.angle);
+
+                // Корпус компаса (кружок)
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.stroke();
+
+                // Северный конец стрелки (Красный)
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.moveTo(0, -14);
+                ctx.lineTo(4, 0);
+                ctx.lineTo(-4, 0);
+                ctx.fill();
+
+                // Южный конец стрелки (Синий/Серый)
+                ctx.fillStyle = '#94a3b8';
+                ctx.beginPath();
+                ctx.moveTo(0, 14);
+                ctx.lineTo(4, 0);
+                ctx.lineTo(-4, 0);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        const wireBtn = document.getElementById('wireBtn');
+        wireBtn.addEventListener('click', () => {
+            isCurrentOn = !isCurrentOn;
+            if (isCurrentOn) {
+                wireBtn.textContent = "ВЫКЛЮЧИТЬ ТОК";
+                wireBtn.classList.add('active');
+            } else {
+                wireBtn.textContent = "ВКЛЮЧИТЬ ЭЛЕКТРИЧЕСКИЙ ТОК";
+                wireBtn.classList.remove('active');
+            }
+        });
+
+        loop();
+    </script>
+</body>
+</html>
